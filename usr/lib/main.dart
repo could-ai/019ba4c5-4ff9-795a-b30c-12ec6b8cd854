@@ -120,7 +120,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   ];
 
   // Constants
-  final double _minProfitPerStudent = 1.00;
+  final double _minProfitPerStudent = 10.00;
 
   // Colors from Palette
   final Color _primaryOrange = const Color(0xFFDA8939);
@@ -563,6 +563,14 @@ class _AddCostDialogState extends State<AddCostDialog> {
     Icons.menu_book, Icons.computer, Icons.support_agent, Icons.directions_bus,
     Icons.restaurant, Icons.sports_soccer, Icons.science, Icons.music_note,
     Icons.build, Icons.security, Icons.wifi, Icons.print,
+    // Novos ícones solicitados
+    Icons.public, // Planeta
+    Icons.attractions, // Roda gigante
+    Icons.pets, // Leão (animal)
+    Icons.forest, // Árvore
+    Icons.local_movies, // Saco de pipoca (cinema)
+    Icons.theater_comedy, // Máscaras de teatro
+    Icons.lunch_dining, // Hambúrguer
   ];
 
   @override
