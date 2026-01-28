@@ -166,6 +166,8 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
 
   double get _minPricePerStudent => _totalCostPerStudent + _minProfitPerStudent;
   
+  double get _totalProjectCost => _totalCostPerStudent * _studentCount;
+  
   double get _totalProjectValue => _simulatedPrice * _studentCount;
   
   double get _totalMinProfit => _studentCount * _minProfitPerStudent;
@@ -216,7 +218,36 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Simulador de Fechamento', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Logo da empresa
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/logo.png',
+                height: 40,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 40,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.business, color: Colors.white, size: 24),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Simulador de Fechamento',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+          ],
+        ),
         actions: [
           Switch(
             value: _isNegotiationMode,
@@ -365,8 +396,8 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                             ),
                           ),
                           const Divider(),
-                          _buildSummaryRow("Custo Total / Aluno:", _totalCostPerStudent, currencyFormat, isBold: true),
-                          _buildSummaryRow("Lucro Mínimo Obrigatório:", _minProfitPerStudent, currencyFormat, color: Colors.green.shade700),
+                          _buildSummaryRow("Custo por Aluno:", _totalCostPerStudent, currencyFormat, isBold: true),
+                          _buildSummaryRow("Lucro Mínimo / Aluno:", _minProfitPerStudent, currencyFormat, color: Colors.green.shade700),
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.all(12),
@@ -378,7 +409,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text("PREÇO MÍNIMO PERMITIDO:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.brown.shade800)),
+                                Text("PREÇO MÍNIMO / ALUNO:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.brown.shade800)),
                                 Text(
                                   currencyFormat.format(_minPricePerStudent),
                                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.brown.shade800),
@@ -463,18 +494,61 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                         const Divider(),
                         const SizedBox(height: 16),
 
-                        // Final Numbers
-                        _buildBigStat("Valor Total do Projeto", _totalProjectValue, currencyFormat, isValid: _isPriceValid),
-                        const SizedBox(height: 16),
-                        if (!_isNegotiationMode) ...[
-                          _buildBigStat("Lucro Total Estimado", (_simulatedPrice - _totalCostPerStudent) * _studentCount, currencyFormat, isSecondary: true),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Lucro Mínimo Garantido: ${currencyFormat.format(_totalMinProfit)}",
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                            textAlign: TextAlign.center,
+                        // Final Numbers - Novo layout com todos os valores
+                        if (!_isNegotiationMode) ..[
+                          _buildInfoCard(
+                            "Custo Total do Projeto",
+                            _totalProjectCost,
+                            currencyFormat,
+                            color: Colors.blue.shade700,
+                            icon: Icons.calculate,
                           ),
+                          const SizedBox(height: 12),
+                          _buildInfoCard(
+                            "Lucro Mínimo Total",
+                            _totalMinProfit,
+                            currencyFormat,
+                            color: Colors.green.shade700,
+                            icon: Icons.trending_up,
+                          ),
+                          const SizedBox(height: 12),
                         ],
+                        
+                        _buildInfoCard(
+                          "Valor Total do Projeto",
+                          _totalProjectValue,
+                          currencyFormat,
+                          color: _isPriceValid ? _primaryOrange : _terracottaRed,
+                          icon: Icons.monetization_on,
+                          isBig: true,
+                        ),
+                        
+                        const SizedBox(height: 12),
+                        
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "Preço por Aluno:",
+                                style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                currencyFormat.format(_simulatedPrice),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: _isPriceValid ? Colors.black87 : _terracottaRed,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
                         const Spacer(),
                         
@@ -521,19 +595,43 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     );
   }
 
-  Widget _buildBigStat(String label, double value, NumberFormat format, {bool isValid = true, bool isSecondary = false}) {
-    return Column(
-      children: [
-        Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
-        Text(
-          format.format(value),
-          style: TextStyle(
-            fontSize: isSecondary ? 24 : 32,
-            fontWeight: FontWeight.bold,
-            color: isValid ? (isSecondary ? _primaryOrange : Colors.black87) : _terracottaRed,
+  Widget _buildInfoCard(String label, double value, NumberFormat format, {required Color color, required IconData icon, bool isBig = false}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: isBig ? 32 : 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: isBig ? 14 : 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  format.format(value),
+                  style: TextStyle(
+                    color: color,
+                    fontSize: isBig ? 24 : 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
