@@ -20,6 +20,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  # Logo da empresa
-  assets:
-    - assets/logo.png
+  # Removed logo asset as logo is now text-based
+  # assets:
+  #   - assets/logo.png

@@ -222,23 +222,19 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Logo da empresa
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                'assets/logo.png',
-                height: 40,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 40,
-                    width: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.business, color: Colors.white, size: 24),
-                  );
-                },
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Sobreventos Produções',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 18,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -495,7 +491,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                         const SizedBox(height: 16),
 
                         // Final Numbers - Novo layout com todos os valores
-                        if (!_isNegotiationMode) ..[
+                        if (!_isNegotiationMode) ...[
                           _buildInfoCard(
                             "Custo Total do Projeto",
                             _totalProjectCost,
