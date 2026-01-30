@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() {
   runApp(const SimulatorApp());
@@ -19,7 +23,7 @@ class SimulatorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Simulador de Custos',
+      title: 'Calculadora de Orçamento',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -151,7 +155,6 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
 
   void _updateSimulation() {
     setState(() {
-      // Simple parsing for demo. In production, use a currency formatter for input.
       String text = _simulationController.text.replaceAll(',', '.');
       _simulatedPrice = double.tryParse(text) ?? 0.0;
     });
@@ -212,6 +215,18 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     );
   }
 
+  void _generateProposal() {
+    showDialog(
+      context: context,
+      builder: (context) => ProposalDialog(
+        schoolName: _schoolNameController.text,
+        studentCount: _studentCount,
+        valuePerStudent: _simulatedPrice,
+        totalInvestment: _totalProjectValue,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
@@ -221,16 +236,16 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Logo da empresa
+            // Logo da empresa (texto)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
+              child: const Text(
                 'Sobreventos Produções',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   fontSize: 18,
@@ -239,7 +254,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
             ),
             const SizedBox(width: 12),
             const Text(
-              'Simulador de Fechamento',
+              'Calculadora de Orçamento',
               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ],
@@ -299,7 +314,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(
-                      labelText: 'Nº Alunos',
+                      labelText: 'Quantidade de alunos',
                       prefixIcon: Icon(Icons.people, color: _primaryOrange),
                     ),
                   ),
@@ -438,18 +453,99 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          "Simulação de Fechamento",
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: _primaryOrange,
-                            fontWeight: FontWeight.bold
+                        // 1) DESTAQUE PRINCIPAL: Valor por aluno e Investimento total
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [_primaryOrange.withOpacity(0.1), _goldenOrange.withOpacity(0.1)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _primaryOrange, width: 2),
                           ),
-                          textAlign: TextAlign.center,
+                          child: Column(
+                            children: [
+                              Text(
+                                "Valor por Aluno",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.brown.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                currencyFormat.format(_simulatedPrice),
+                                style: TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: _isPriceValid ? _primaryOrange : _terracottaRed,
+                                ),
+                              ),
+                              const Divider(height: 32),
+                              Text(
+                                "Investimento Total",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.brown.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                currencyFormat.format(_totalProjectValue),
+                                style: TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: _isPriceValid ? _primaryOrange : _terracottaRed,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // 2) INFORMAÇÃO SECUNDÁRIA: Quantidade de alunos
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.people, color: _primaryOrange),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Quantidade de alunos:",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                _studentCount.toString(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                         const SizedBox(height: 24),
                         
                         // Simulation Input
-                        Text("Preço Proposto por Aluno", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                        Text("Definir Valor por Aluno", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _simulationController,
@@ -481,82 +577,50 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                           Padding(
                             padding: const EdgeInsets.only(top: 8.0),
                             child: Text(
-                              "Valor abaixo do mínimo permitido (${currencyFormat.format(_minPricePerStudent)})",
-                              style: TextStyle(color: _terracottaRed, fontWeight: FontWeight.bold),
+                              "Este valor não garante a viabilidade do projeto dentro do melhor custo-benefício.",
+                              style: TextStyle(color: _terracottaRed, fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           ),
 
-                        const SizedBox(height: 32),
-                        const Divider(),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 24),
 
-                        // Final Numbers - Novo layout com todos os valores
-                        if (!_isNegotiationMode) ...[
-                          _buildInfoCard(
-                            "Custo Total do Projeto",
+                        // 3) SEÇÃO DE CUSTOS INTERNOS (menor destaque, oculto em modo negociação)
+                        if (!_isNegotiationMode) ..[
+                          const Divider(),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Informações Internas",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildSmallInfoRow(
+                            "Custo operacional total",
                             _totalProjectCost,
                             currencyFormat,
                             color: Colors.blue.shade700,
-                            icon: Icons.calculate,
                           ),
-                          const SizedBox(height: 12),
-                          _buildInfoCard(
-                            "Lucro Mínimo Total",
+                          const SizedBox(height: 8),
+                          _buildSmallInfoRow(
+                            "Resultado mínimo do projeto",
                             _totalMinProfit,
                             currencyFormat,
                             color: Colors.green.shade700,
-                            icon: Icons.trending_up,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
                         ],
-                        
-                        _buildInfoCard(
-                          "Valor Total do Projeto",
-                          _totalProjectValue,
-                          currencyFormat,
-                          color: _isPriceValid ? _primaryOrange : _terracottaRed,
-                          icon: Icons.monetization_on,
-                          isBig: true,
-                        ),
-                        
-                        const SizedBox(height: 12),
-                        
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                "Preço por Aluno:",
-                                style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w500),
-                              ),
-                              Text(
-                                currencyFormat.format(_simulatedPrice),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: _isPriceValid ? Colors.black87 : _terracottaRed,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
 
                         const Spacer(),
                         
+                        // 5) AÇÃO PRINCIPAL
                         SizedBox(
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: _isPriceValid && _studentCount > 0 ? () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Proposta validada e pronta para contrato!'), backgroundColor: Colors.green),
-                              );
-                            } : null,
+                            onPressed: _isPriceValid && _studentCount > 0 ? _generateProposal : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _isPriceValid ? _terracottaRed : Colors.grey,
                               foregroundColor: Colors.white,
@@ -591,39 +655,31 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     );
   }
 
-  Widget _buildInfoCard(String label, double value, NumberFormat format, {required Color color, required IconData icon, bool isBig = false}) {
+  Widget _buildSmallInfoRow(String label, double value, NumberFormat format, {required Color color}) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color, width: 1.5),
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color, size: isBig ? 32 : 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: isBig ? 14 : 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  format.format(value),
-                  style: TextStyle(
-                    color: color,
-                    fontSize: isBig ? 24 : 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            format.format(value),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],
@@ -657,7 +713,6 @@ class _AddCostDialogState extends State<AddCostDialog> {
     Icons.menu_book, Icons.computer, Icons.support_agent, Icons.directions_bus,
     Icons.restaurant, Icons.sports_soccer, Icons.science, Icons.music_note,
     Icons.build, Icons.security, Icons.wifi, Icons.print,
-    // Novos ícones solicitados
     Icons.public, // Planeta
     Icons.attractions, // Roda gigante
     Icons.pets, // Leão (animal)
@@ -742,6 +797,270 @@ class _AddCostDialogState extends State<AddCostDialog> {
           },
           style: ElevatedButton.styleFrom(backgroundColor: _primaryOrange),
           child: const Text('Salvar'),
+        ),
+      ],
+    );
+  }
+}
+
+// --- Proposal Dialog ---
+
+class ProposalDialog extends StatelessWidget {
+  final String schoolName;
+  final int studentCount;
+  final double valuePerStudent;
+  final double totalInvestment;
+
+  const ProposalDialog({
+    super.key,
+    required this.schoolName,
+    required this.studentCount,
+    required this.valuePerStudent,
+    required this.totalInvestment,
+  });
+
+  // Colors
+  static const Color _primaryOrange = Color(0xFFDA8939);
+  static const Color _terracottaRed = Color(0xFFDE5038);
+  static const Color _goldenOrange = Color(0xFFEDA639);
+
+  String get proposalText {
+    final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    return '''
+Proposta Educacional
+
+Escola: $schoolName
+Quantidade de alunos: $studentCount
+Valor por aluno: ${currencyFormat.format(valuePerStudent)}
+Investimento total: ${currencyFormat.format(totalInvestment)}
+
+Esta proposta foi elaborada considerando a melhor experiência possível para os alunos, aliando qualidade, organização e custo-benefício.
+''';
+  }
+
+  Future<void> _copyToClipboard(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: proposalText));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Proposta copiada para a área de transferência!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _exportPDF(BuildContext context) async {
+    final pdf = pw.Document();
+    final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'Proposta Educacional',
+                style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Divider(),
+              pw.SizedBox(height: 20),
+              pw.Text('Escola: $schoolName', style: const pw.TextStyle(fontSize: 16)),
+              pw.SizedBox(height: 10),
+              pw.Text('Quantidade de alunos: $studentCount', style: const pw.TextStyle(fontSize: 16)),
+              pw.SizedBox(height: 10),
+              pw.Text('Valor por aluno: ${currencyFormat.format(valuePerStudent)}', style: const pw.TextStyle(fontSize: 16)),
+              pw.SizedBox(height: 10),
+              pw.Text('Investimento total: ${currencyFormat.format(totalInvestment)}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 30),
+              pw.Divider(),
+              pw.SizedBox(height: 20),
+              pw.Text(
+                'Esta proposta foi elaborada considerando a melhor experiência possível para os alunos, aliando qualidade, organização e custo-benefício.',
+                style: const pw.TextStyle(fontSize: 14),
+                textAlign: pw.TextAlign.justify,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
+  }
+
+  Future<void> _shareProposal() async {
+    await Share.share(proposalText, subject: 'Proposta Educacional - $schoolName');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Proposta Gerada',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: _primaryOrange,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(),
+            const SizedBox(height: 16),
+            
+            // Company Logo/Name
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _primaryOrange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Sobreventos Produções',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: _primaryOrange,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Proposal Content
+            Expanded(
+              child: SingleChildScrollView(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Proposta Educacional',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildProposalRow('Escola:', schoolName),
+                      const SizedBox(height: 12),
+                      _buildProposalRow('Quantidade de alunos:', studentCount.toString()),
+                      const SizedBox(height: 12),
+                      _buildProposalRow('Valor por aluno:', currencyFormat.format(valuePerStudent)),
+                      const SizedBox(height: 12),
+                      _buildProposalRow('Investimento total:', currencyFormat.format(totalInvestment), isBold: true),
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Esta proposta foi elaborada considerando a melhor experiência possível para os alunos, aliando qualidade, organização e custo-benefício.',
+                        style: TextStyle(fontSize: 14, height: 1.5),
+                        textAlign: TextAlign.justify,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _copyToClipboard(context),
+                    icon: const Icon(Icons.copy, size: 20),
+                    label: const Text('Copiar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _goldenOrange,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _exportPDF(context),
+                    icon: const Icon(Icons.picture_as_pdf, size: 20),
+                    label: const Text('PDF'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _terracottaRed,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _shareProposal,
+                    icon: const Icon(Icons.share, size: 20),
+                    label: const Text('Enviar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primaryOrange,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProposalRow(String label, String value, {bool isBold = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 180,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 18 : 14,
+            ),
+          ),
         ),
       ],
     );
