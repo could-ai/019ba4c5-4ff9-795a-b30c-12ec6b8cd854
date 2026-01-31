@@ -230,35 +230,40 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final isDesktop = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Logo da empresa (texto)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
+        title: isDesktop
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Sobreventos Produções',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Calculadora de Orçamento',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
+              )
+            : const Text(
+                'Calculadora de Orçamento',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
               ),
-              child: const Text(
-                'Sobreventos Produções',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Calculadora de Orçamento',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ],
-        ),
         actions: [
           Switch(
             value: _isNegotiationMode,
@@ -273,13 +278,206 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
               });
             },
           ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16.0, left: 8.0),
-            child: Center(child: Text("Modo Negociação", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0, left: 8.0),
+            child: Center(
+              child: Text(
+                isDesktop ? "Modo Negociação" : "Negociação",
+                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
           )
         ],
       ),
-      body: Column(
+      body: isDesktop ? _buildDesktopLayout(currencyFormat) : _buildMobileLayout(currencyFormat),
+    );
+  }
+
+  Widget _buildDesktopLayout(NumberFormat currencyFormat) {
+    return Column(
+      children: [
+        // Header Section (School Info)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              )
+            ]
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: _schoolNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nome da Escola',
+                    prefixIcon: Icon(Icons.school, color: _primaryOrange),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 1,
+                child: TextField(
+                  controller: _studentsController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    labelText: 'Quantidade de alunos',
+                    prefixIcon: Icon(Icons.people, color: _primaryOrange),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left Column: Costs List (Hidden in Negotiation Mode)
+              if (!_isNegotiationMode)
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Composição de Custos (por aluno)",
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.brown.shade700
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _addNewCost,
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text("Adicionar"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _goldenOrange,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                            )
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: _costs.length,
+                            itemBuilder: (context, index) {
+                              final cost = _costs[index];
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: cost.isActive 
+                                        ? _lightOrange.withOpacity(0.3) 
+                                        : Colors.grey.shade200,
+                                    child: Icon(cost.icon, color: cost.isActive ? _primaryOrange : Colors.grey),
+                                  ),
+                                  title: Text(
+                                    cost.name,
+                                    style: TextStyle(
+                                      decoration: cost.isActive ? null : TextDecoration.lineThrough,
+                                      color: cost.isActive ? Colors.black87 : Colors.grey,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  subtitle: Text(currencyFormat.format(cost.value)),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Switch(
+                                        value: cost.isActive,
+                                        activeColor: _primaryOrange,
+                                        onChanged: (val) => _toggleCost(index),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.edit, size: 20),
+                                        color: Colors.grey.shade600,
+                                        onPressed: () => _editCost(index),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete, size: 20),
+                                        color: _terracottaRed,
+                                        onPressed: () => _removeCost(index),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const Divider(),
+                        _buildSummaryRow("Custo por Aluno:", _totalCostPerStudent, currencyFormat, isBold: true),
+                        _buildSummaryRow("Lucro Mínimo / Aluno:", _minProfitPerStudent, currencyFormat, color: Colors.green.shade700),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: _lightOrange.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: _goldenOrange),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text("PREÇO MÍNIMO / ALUNO:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.brown.shade800)),
+                              Text(
+                                currencyFormat.format(_minPricePerStudent),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.brown.shade800),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Right Column: Simulation & Closing (Always Visible)
+              Expanded(
+                flex: 2,
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ]
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  child: _buildSimulationPanel(currencyFormat),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout(NumberFormat currencyFormat) {
+    return SingleChildScrollView(
+      child: Column(
         children: [
           // Header Section (School Info)
           Container(
@@ -294,351 +492,374 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                 )
               ]
             ),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: _schoolNameController,
-                    decoration: InputDecoration(
-                      labelText: 'Nome da Escola',
-                      prefixIcon: Icon(Icons.school, color: _primaryOrange),
-                    ),
+                TextField(
+                  controller: _schoolNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nome da Escola',
+                    prefixIcon: Icon(Icons.school, color: _primaryOrange),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 1,
-                  child: TextField(
-                    controller: _studentsController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      labelText: 'Quantidade de alunos',
-                      prefixIcon: Icon(Icons.people, color: _primaryOrange),
-                    ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _studentsController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    labelText: 'Quantidade de alunos',
+                    prefixIcon: Icon(Icons.people, color: _primaryOrange),
                   ),
                 ),
               ],
             ),
           ),
           
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left Column: Costs List (Hidden in Negotiation Mode)
-                if (!_isNegotiationMode)
-                  Expanded(
-                    flex: 3,
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                "Composição de Custos (por aluno)",
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.brown.shade700
-                                ),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed: _addNewCost,
-                                icon: const Icon(Icons.add, size: 18),
-                                label: const Text("Adicionar"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _goldenOrange,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                              )
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: _costs.length,
-                              itemBuilder: (context, index) {
-                                final cost = _costs[index];
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: cost.isActive 
-                                          ? _lightOrange.withOpacity(0.3) 
-                                          : Colors.grey.shade200,
-                                      child: Icon(cost.icon, color: cost.isActive ? _primaryOrange : Colors.grey),
-                                    ),
-                                    title: Text(
-                                      cost.name,
-                                      style: TextStyle(
-                                        decoration: cost.isActive ? null : TextDecoration.lineThrough,
-                                        color: cost.isActive ? Colors.black87 : Colors.grey,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    subtitle: Text(currencyFormat.format(cost.value)),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Switch(
-                                          value: cost.isActive,
-                                          activeColor: _primaryOrange,
-                                          onChanged: (val) => _toggleCost(index),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.edit, size: 20),
-                                          color: Colors.grey.shade600,
-                                          onPressed: () => _editCost(index),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete, size: 20),
-                                          color: _terracottaRed,
-                                          onPressed: () => _removeCost(index),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const Divider(),
-                          _buildSummaryRow("Custo por Aluno:", _totalCostPerStudent, currencyFormat, isBold: true),
-                          _buildSummaryRow("Lucro Mínimo / Aluno:", _minProfitPerStudent, currencyFormat, color: Colors.green.shade700),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: _lightOrange.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: _goldenOrange),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text("PREÇO MÍNIMO / ALUNO:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.brown.shade800)),
-                                Text(
-                                  currencyFormat.format(_minPricePerStudent),
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.brown.shade800),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+          // Simulation Panel
+          Container(
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            ),
+            padding: const EdgeInsets.all(20),
+            child: _buildSimulationPanel(currencyFormat),
+          ),
 
-                // Right Column: Simulation & Closing (Always Visible)
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        )
-                      ]
-                    ),
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // 1) DESTAQUE PRINCIPAL: Valor por aluno e Investimento total
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [_primaryOrange.withOpacity(0.1), _goldenOrange.withOpacity(0.1)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _primaryOrange, width: 2),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                "Valor por Aluno",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.brown.shade700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                currencyFormat.format(_simulatedPrice),
-                                style: TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                  color: _isPriceValid ? _primaryOrange : _terracottaRed,
-                                ),
-                              ),
-                              const Divider(height: 32),
-                              Text(
-                                "Investimento Total",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.brown.shade700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                currencyFormat.format(_totalProjectValue),
-                                style: TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                  color: _isPriceValid ? _primaryOrange : _terracottaRed,
-                                ),
-                              ),
-                            ],
+          // Costs List (Hidden in Negotiation Mode)
+          if (!_isNegotiationMode)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Composição de Custos",
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.brown.shade700
                           ),
                         ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // 2) INFORMAÇÃO SECUNDÁRIA: Quantidade de alunos
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _addNewCost,
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text("Adicionar"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _goldenOrange,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _costs.length,
+                    itemBuilder: (context, index) {
+                      final cost = _costs[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: cost.isActive 
+                                ? _lightOrange.withOpacity(0.3) 
+                                : Colors.grey.shade200,
+                            child: Icon(cost.icon, color: cost.isActive ? _primaryOrange : Colors.grey, size: 20),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          title: Text(
+                            cost.name,
+                            style: TextStyle(
+                              decoration: cost.isActive ? null : TextDecoration.lineThrough,
+                              color: cost.isActive ? Colors.black87 : Colors.grey,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Text(currencyFormat.format(cost.value), style: const TextStyle(fontSize: 12)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.people, color: _primaryOrange),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "Quantidade de alunos:",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey.shade700,
+                              Switch(
+                                value: cost.isActive,
+                                activeColor: _primaryOrange,
+                                onChanged: (val) => _toggleCost(index),
+                              ),
+                              PopupMenuButton(
+                                icon: const Icon(Icons.more_vert, size: 20),
+                                itemBuilder: (context) => [
+                                  PopupMenuItem(
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.edit, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('Editar'),
+                                      ],
                                     ),
+                                    onTap: () {
+                                      Future.delayed(Duration.zero, () => _editCost(index));
+                                    },
+                                  ),
+                                  PopupMenuItem(
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.delete, size: 18, color: _terracottaRed),
+                                        const SizedBox(width: 8),
+                                        Text('Remover', style: TextStyle(color: _terracottaRed)),
+                                      ],
+                                    ),
+                                    onTap: () => _removeCost(index),
                                   ),
                                 ],
                               ),
-                              Text(
-                                _studentCount.toString(),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
                             ],
                           ),
                         ),
-
-                        const SizedBox(height: 24),
-                        
-                        // Simulation Input
-                        Text("Definir Valor por Aluno", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _simulationController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                          decoration: InputDecoration(
-                            prefixText: 'R\$ ',
-                            filled: true,
-                            fillColor: _isPriceValid ? Colors.green.shade50 : _terracottaRed.withOpacity(0.1),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: _isPriceValid ? Colors.green : _terracottaRed,
-                                width: 2,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: _isPriceValid ? Colors.green : _terracottaRed,
-                                width: 2,
-                              ),
-                            ),
-                            suffixIcon: _isPriceValid 
-                                ? const Icon(Icons.check_circle, color: Colors.green)
-                                : Icon(Icons.block, color: _terracottaRed),
+                      );
+                    },
+                  ),
+                  const Divider(),
+                  _buildSummaryRow("Custo por Aluno:", _totalCostPerStudent, currencyFormat, isBold: true),
+                  _buildSummaryRow("Lucro Mínimo / Aluno:", _minProfitPerStudent, currencyFormat, color: Colors.green.shade700),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _lightOrange.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _goldenOrange),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            "PREÇO MÍNIMO / ALUNO:",
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                           ),
                         ),
-                        
-                        if (!_isPriceValid && _simulationController.text.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              "Este valor não garante a viabilidade do projeto dentro do melhor custo-benefício.",
-                              style: TextStyle(color: _terracottaRed, fontWeight: FontWeight.bold, fontSize: 12),
-                            ),
-                          ),
-
-                        const SizedBox(height: 24),
-
-                        // 3) SEÇÃO DE CUSTOS INTERNOS (menor destaque, oculto em modo negociação)
-                        if (!_isNegotiationMode) ..[
-                          const Divider(),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Informações Internas",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildSmallInfoRow(
-                            "Custo operacional total",
-                            _totalProjectCost,
-                            currencyFormat,
-                            color: Colors.blue.shade700,
-                          ),
-                          const SizedBox(height: 8),
-                          _buildSmallInfoRow(
-                            "Resultado mínimo do projeto",
-                            _totalMinProfit,
-                            currencyFormat,
-                            color: Colors.green.shade700,
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        const Spacer(),
-                        
-                        // 5) AÇÃO PRINCIPAL
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: _isPriceValid && _studentCount > 0 ? _generateProposal : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _isPriceValid ? _terracottaRed : Colors.grey,
-                              foregroundColor: Colors.white,
-                              elevation: 4,
-                              textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            child: const Text("GERAR PROPOSTA"),
-                          ),
+                        Text(
+                          currencyFormat.format(_minPricePerStudent),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.brown.shade800),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          const SizedBox(height: 80), // Space for bottom padding
         ],
       ),
+    );
+  }
+
+  Widget _buildSimulationPanel(NumberFormat currencyFormat) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 1) DESTAQUE PRINCIPAL: Valor por aluno e Investimento total
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [_primaryOrange.withOpacity(0.1), _goldenOrange.withOpacity(0.1)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _primaryOrange, width: 2),
+          ),
+          child: Column(
+            children: [
+              Text(
+                "Valor por Aluno",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.brown.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                currencyFormat.format(_simulatedPrice),
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: _isPriceValid ? _primaryOrange : _terracottaRed,
+                ),
+              ),
+              const Divider(height: 32),
+              Text(
+                "Investimento Total",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.brown.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                currencyFormat.format(_totalProjectValue),
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: _isPriceValid ? _primaryOrange : _terracottaRed,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // 2) INFORMAÇÃO SECUNDÁRIA: Quantidade de alunos
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.people, color: _primaryOrange),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Quantidade de alunos:",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                _studentCount.toString(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+        
+        // Simulation Input
+        Text("Definir Valor por Aluno", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _simulationController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          decoration: InputDecoration(
+            prefixText: 'R\$ ',
+            filled: true,
+            fillColor: _isPriceValid ? Colors.green.shade50 : _terracottaRed.withOpacity(0.1),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+                color: _isPriceValid ? Colors.green : _terracottaRed,
+                width: 2,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+                color: _isPriceValid ? Colors.green : _terracottaRed,
+                width: 2,
+              ),
+            ),
+            suffixIcon: _isPriceValid 
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : Icon(Icons.block, color: _terracottaRed),
+          ),
+        ),
+        
+        if (!_isPriceValid && _simulationController.text.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              "Este valor não garante a viabilidade do projeto dentro do melhor custo-benefício.",
+              style: TextStyle(color: _terracottaRed, fontWeight: FontWeight.bold, fontSize: 12),
+            ),
+          ),
+
+        const SizedBox(height: 24),
+
+        // 3) SEÇÃO DE CUSTOS INTERNOS (menor destaque, oculto em modo negociação)
+        if (!_isNegotiationMode) ...[
+          const Divider(),
+          const SizedBox(height: 8),
+          Text(
+            "Informações Internas",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildSmallInfoRow(
+            "Custo operacional total",
+            _totalProjectCost,
+            currencyFormat,
+            color: Colors.blue.shade700,
+          ),
+          const SizedBox(height: 8),
+          _buildSmallInfoRow(
+            "Resultado mínimo do projeto",
+            _totalMinProfit,
+            currencyFormat,
+            color: Colors.green.shade700,
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        const Spacer(),
+        
+        // 5) AÇÃO PRINCIPAL
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: _isPriceValid && _studentCount > 0 ? _generateProposal : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _isPriceValid ? _terracottaRed : Colors.grey,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            child: const Text("GERAR PROPOSTA"),
+          ),
+        ),
+      ],
     );
   }
 
@@ -666,12 +887,14 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           Text(
